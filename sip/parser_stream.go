@@ -101,22 +101,31 @@ func (p *ParserStream) parseSingle(reader *bytes.Buffer, unparsed *[]byte) (err 
 	// TODO change this with functions and store last function state
 	switch p.state {
 	case stateStartLine:
-		startLine, err := nextLine(reader)
+		for {
+			startLine, err := nextLine(reader)
 
-		if err != nil {
-			if err == io.EOF {
-				return ErrParseLineNoCRLF
+			if err != nil {
+				if err == io.EOF {
+					return ErrParseLineNoCRLF
+				}
+				return err
 			}
-			return err
+
+			// Parse after ensure it's not empty line, read  next line if it's empty.
+			// Because some Hikvision camera will send an extra empty line after body.
+			if len(startLine) != 0 {
+				msg, err := parseLine(startLine)
+				if err != nil {
+					return err
+				}
+
+				p.state = stateHeader
+				p.msg = msg
+
+				break
+			}
 		}
 
-		msg, err := parseLine(startLine)
-		if err != nil {
-			return err
-		}
-
-		p.state = stateHeader
-		p.msg = msg
 		fallthrough
 	case stateHeader:
 		msg := p.msg
