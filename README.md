@@ -2,16 +2,15 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/emiago/sipgo)](https://goreportcard.com/report/github.com/emiago/sipgo)
 ![Used By](https://sourcegraph.com/github.com/emiago/sipgo/-/badge.svg)
-![Coverage](https://img.shields.io/badge/coverage-47.0%25-blue)
+![Coverage](https://img.shields.io/badge/coverage-55.4%25-blue)
 [![License](https://img.shields.io/badge/License-BSD_2--Clause-orange.svg)](https://github.com/emiago/sipgo/LICENCE) 
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/emiago/sipgo)
 
 **SIPGO** is library for writing fast SIP services in GO language.  
 It comes with [SIP stack](/sip/README.md) ([RFC 3261](https://datatracker.ietf.org/doc/html/rfc3261)|[RFC3581](https://datatracker.ietf.org/doc/html/rfc3581)|[RFC6026](https://datatracker.ietf.org/doc/html/rfc6026)) optimized for fast parsing.
 
----
-**NOTE**: LIBRARY IS IN PROCESS GETTING TO 1.0. THIS MAY TAKE TIME UNTIL WE CLOSE ALL ISSUES. PLEASE OPEN ISSUES FOR DISCUSSION FIRST INSTEAD PULL REQUESTS.
----
+
+> **NOTE**: LIBRARY IS IN PROCESS GETTING TO 1.0. THIS MAY TAKE TIME UNTIL WE CLOSE ALL ISSUES. PLEASE OPEN ISSUES FOR DISCUSSION FIRST INSTEAD PULL REQUESTS.
 
 **Libs on top of sipgo:**
 - ***diago*** [github.com/emiago/diago](https://github.com/emiago/diago): Full VOIP library/framework with media stack 
@@ -40,6 +39,17 @@ More on documentation you can find on [Go doc](https://pkg.go.dev/github.com/emi
 - [x] TLS
 - [x] WS
 - [x] WSS
+
+
+### RFC:
+- [RFC 3261](https://datatracker.ietf.org/doc/html/rfc3261)
+- [RFC3581](https://datatracker.ietf.org/doc/html/rfc3581)
+- [RFC6026](https://datatracker.ietf.org/doc/html/rfc6026)
+
+State of Torture Tests [RFC4475](https://datatracker.ietf.org/doc/html/rfc6026) you can find on issue [github.com/emiago/sipgo/issues/57](https://github.com/emiago/sipgo/issues/57)
+but NOTE: some strict validation things may 
+be seperated from parsing or not built into library.
+
 
 ## Examples
 
@@ -95,9 +105,31 @@ go srv.ListenAndServe(ctx, "ws", "127.0.0.1:5080")
 ### TLS transports
 ```go 
 // TLS
-conf :=  sipgo.GenerateTLSConfig(certFile, keyFile, rootPems)
+conf := generateTLSConfig(certFile, keyFile, rootPems)
 srv.ListenAndServeTLS(ctx, "tcp", "127.0.0.1:5061", conf)
 srv.ListenAndServeTLS(ctx, "ws", "127.0.0.1:5081", conf)
+
+func generateTLSConfig(certFile string, keyFile string, rootPems []byte) (*tls.Config, error) {
+	roots := x509.NewCertPool()
+	if rootPems != nil {
+		ok := roots.AppendCertsFromPEM(rootPems)
+		if !ok {
+			return nil, fmt.Errorf("failed to parse root certificate")
+		}
+	}
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("fail to load cert. err=%w", err)
+	}
+
+	conf := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      roots,
+	}
+
+	return conf, nil
+}
 ```
 
 ### UAC first

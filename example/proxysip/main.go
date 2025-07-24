@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -28,8 +30,6 @@ import (
 	slogzerolog "github.com/samber/slog-zerolog/v2"
 	// _ "go.uber.org/automaxprocs"
 )
-
-var ()
 
 func main() {
 	defer pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
@@ -304,4 +304,26 @@ func newCancelRequest(inviteRequest *sip.Request) *sip.Request {
 	cancelReq.SetSource(inviteRequest.Source())
 	cancelReq.SetDestination(inviteRequest.Destination())
 	return cancelReq
+}
+
+func generateTLSConfig(certFile string, keyFile string, rootPems []byte) (*tls.Config, error) {
+	roots := x509.NewCertPool()
+	if rootPems != nil {
+		ok := roots.AppendCertsFromPEM(rootPems)
+		if !ok {
+			return nil, fmt.Errorf("failed to parse root certificate")
+		}
+	}
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("fail to load cert. err=%w", err)
+	}
+
+	conf := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      roots,
+	}
+
+	return conf, nil
 }
